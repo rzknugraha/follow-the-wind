@@ -1,6 +1,181 @@
 version: "3.7"
+
 services:
-   web:
-     build: ./php
-     ports:
-       - 8000:80
+
+  zookeeper:
+    container_name: zookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+  dbPG:
+    container_name: dbPG
+    image: postgres:15.1
+    hostname: pg-host
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  kafka:
+    container_name: kafka
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+    - zookeeper
+    ports:
+    - "9092:9092"
+    expose:
+    - "9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,OUTSIDE://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9093,OUTSIDE://0.0.0.0:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+  redis:
+    image: redis:7.0
+    container_name: redis
+    volumes:
+      - ./redis:/var/lib/redis
+    ports:
+      - "6379:6379"
+    restart: always
+  mongodb:
+    image: mongo:5.0
+    container_name: "mongodb-rs1"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/var/log/mongodb
+    volumes:
+      - "./mongodb:/home"
+    ports:
+      - 27017:27017
+    command: mongod --noprealloc --smallfiles --oplogSize 16 --dbpath /data/db --noauth
+    restart: always
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.3
+    container_name: "elasticsearch"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+    volumes:
+      - "./es:/usr/share/elasticsearch/data"
+    networks:
+      - wind-net
+    restart: always
+  nginx:
+      container_name: "nginx"
+      image: nginx:stable
+      ports:
+        - "8081:80"
+      volumes:
+        - ./nginx/site.conf:/etc/nginx/conf.d/default.conf
+      external_links:
+        - php
+        - dbPG
+  php:
+      container_name: "php"
+      build: ./php
+      volumes:
+        - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini
+      external_links:
+        - nginx
+        - redis
+        - dbPG
+  kong-migration:
+    image: kong:latest
+    container_name: kong-migration
+    command: >
+      /bin/sh -c "
+        while ! nc -z dbPG 5432;
+        do
+          echo waiting;
+          sleep 1;
+        done;
+        kong migrations bootstrap
+      "
+    networks:
+      - kong-net
+    restart: on-failure
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: dbPG
+      KONG_PG_DATABASE: kong_db
+      KONG_PG_USER: admin
+      KONG_PG_PASSWORD: admin
+    links:
+      - dbPG
+    depends_on:
+      - dbPG
+  kong:
+    image: kong:latest
+    container_name: kong
+    restart: always
+    networks:
+      - kong-net
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: dbPG
+      KONG_PG_USER: admin
+      KONG_PG_DATABASE: kong_db
+      KONG_PG_PASSWORD: admin
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    depends_on:
+      - kong-migration
+      - dbPG
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://kong:8001"]
+      interval: 5s
+      timeout: 2s
+      retries: 15
+    ports:
+      - "8001:8001/tcp"
+      - "8000:8000/tcp"
+      - "8443:8443/tcp"
+  konga-prepare:
+    image: pantsel/konga:next
+    container_name: konga-prepare
+    command: "-c prepare -a postgres -u postgresql://admin:admin@dbPG:5432/konga_db"
+    networks:
+      - kong-net
+    restart: on-failure
+    links:
+      - dbPG
+    depends_on:
+      - dbPG
+  konga:
+    image: pantsel/konga:next
+    container_name: konga
+    restart: always
+    networks:
+        - kong-net
+    environment:
+      DB_ADAPTER: postgres
+      DB_HOST: dbPG
+      DB_USER: admin
+      DB_PASSWORD: admin
+      TOKEN_SECRET: km1GUr4RkcQD7DewhJPNXrCuZwcKmqjb
+      DB_DATABASE: konga_db
+      NODE_ENV: production
+    depends_on:
+      - dbPG
+    ports:
+      - "1337:1337"
+networks:
+  wind-net:
+    driver: bridge
+  kong-net:
+    driver: bridge
