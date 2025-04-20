@@ -13,8 +13,8 @@ services:
     hostname: pg-host
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: ${PG_HOST}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     networks:
       - kong-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "admin"]
+      test: ["CMD", "pg_isready", "-U", "${PG_HOST}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -126,8 +126,8 @@ services:
       KONG_DATABASE: postgres
       KONG_PG_HOST: dbPG
       KONG_PG_DATABASE: kong_db
-      KONG_PG_USER: admin
-      KONG_PG_PASSWORD: admin
+      KONG_PG_USER: ${PG_USER}
+      KONG_PG_PASSWORD: ${PG_PASSWORD}
     links:
       - dbPG
     depends_on:
@@ -141,9 +141,9 @@ services:
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: dbPG
-      KONG_PG_USER: admin
+      KONG_PG_USER: ${PG_USER}
       KONG_PG_DATABASE: kong_db
-      KONG_PG_PASSWORD: admin
+      KONG_PG_PASSWORD: ${PG_PASSWORD}
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
     depends_on:
       - kong-migration
@@ -186,6 +186,15 @@ services:
       - dbPG
     ports:
       - "1337:1337"
+  python:
+    build: ./python
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./python:/app
+    depends_on:
+      - db
+
 networks:
   wind-net:
     driver: bridge
