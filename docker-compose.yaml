@@ -13,7 +13,7 @@ services:
     hostname: pg-host
     restart: always
     environment:
-      POSTGRES_USER: ${PG_HOST}
+      POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
     ports:
       - "5432:5432"
@@ -22,7 +22,7 @@ services:
     networks:
       - kong-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${PG_HOST}"]
+      test: ["CMD", "pg_isready", "-U", "${PG_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -187,13 +187,17 @@ services:
     ports:
       - "1337:1337"
   python:
-    build: ./python
+    build:
+      context: .
+      dockerfile: python.Dockerfile
+    container_name: python_env
+    env_file:
+      - .env
+    tty: true
+    stdin_open: true
     ports:
-      - "8000:8000"
-    volumes:
-      - ./python:/app
-    depends_on:
-      - db
+      - "8000:8000"  # Optional
+    command: tail -f /dev/null
 
 networks:
   wind-net:

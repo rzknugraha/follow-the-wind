@@ -1,0 +1,7 @@
+pandas
+openpyxl
+psycopg2-binary
+elasticsearch
+numpy
+yagmail
+python-dotenv
