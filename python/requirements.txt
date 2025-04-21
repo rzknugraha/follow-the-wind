@@ -5,3 +5,6 @@ elasticsearch
 numpy
 yagmail
 python-dotenv
+fastapi
+uvicorn[standard]
+python-multipart
