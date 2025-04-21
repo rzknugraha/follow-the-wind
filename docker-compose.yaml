@@ -188,8 +188,8 @@ services:
       - "1337:1337"
   python:
     build:
-      context: .
-      dockerfile: python.Dockerfile
+      context: ./python
+      dockerfile: Dockerfile
     container_name: python_env
     env_file:
       - .env
