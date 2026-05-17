@@ -48,6 +48,7 @@ follow-the-wind/
 │       └── docker-compose.yaml
 ├── .env-example
 ├── .gitignore
+├── CONTRIBUTING.md
 ├── docker-compose.yaml
 ├── Makefile
 └── README.md
@@ -295,6 +296,28 @@ After changing `python/requirements.txt`, rebuild the Python environment:
 ```bash
 make python-build
 ```
+
+---
+
+## 📝 Commit Message Convention
+
+This repository uses a simple commit message pattern:
+
+```text
+<type>: <short message>
+```
+
+Examples:
+
+```text
+feat: add standalone redis stack
+fix: correct python compose env path
+docs: update readme usage instructions
+```
+
+Common types include `feat`, `fix`, `docs`, `chore`, `refactor`, `style`, `test`, `build`, `ci`, `perf`, and `revert`.
+
+See `CONTRIBUTING.md` for the full convention.
 
 ---
 
