@@ -12,8 +12,9 @@ This repository is designed for:
 
 - Reusable local development environments
 - Python runtime environment for external repositories
+- Standalone infrastructure stacks
 - PHP + Nginx environment
-- PostgreSQL, Redis, MongoDB, Kafka, Elasticsearch, Kibana, Kong, and Konga lab services
+- PostgreSQL, Redis, MongoDB, Kafka, Zookeeper, Elasticsearch, and Kibana lab services
 - Testing integration between services
 - Running scripts or applications from another repository through volume mounting
 
@@ -30,7 +31,21 @@ follow-the-wind/
 │   └── php.ini
 ├── python/
 │   ├── Dockerfile
+│   ├── docker-compose.yaml
 │   └── requirements.txt
+├── stacks/
+│   ├── elastic/
+│   │   └── docker-compose.yaml
+│   ├── kafka-zookeeper/
+│   │   └── docker-compose.yaml
+│   ├── mongodb/
+│   │   └── docker-compose.yaml
+│   ├── nginx-php/
+│   │   └── docker-compose.yaml
+│   ├── postgres/
+│   │   └── docker-compose.yaml
+│   └── redis/
+│       └── docker-compose.yaml
 ├── .env-example
 ├── .gitignore
 ├── docker-compose.yaml
@@ -63,6 +78,18 @@ cd /workspace
 python main.py
 ```
 
+Start the standalone Python environment:
+
+```bash
+make python-up
+```
+
+Enter the Python container:
+
+```bash
+make python-shell
+```
+
 ---
 
 ## ⚙️ Environment Variables
@@ -74,6 +101,7 @@ Example:
 ```env
 PG_USER=admin
 PG_PASSWORD=admin
+PG_DATABASE=app_db
 KONGA_TOKEN_SECRET=change_this_token_secret
 APP_PATH=../external-python-app
 ```
@@ -96,34 +124,6 @@ The `.env` file is ignored by Git and should not be committed.
 
 ---
 
-## 🚀 Basic Docker Commands
-
-Start all services:
-
-```bash
-docker compose --env-file .env-example up -d
-```
-
-Stop all services:
-
-```bash
-docker compose --env-file .env-example down
-```
-
-Build services:
-
-```bash
-docker compose --env-file .env-example build
-```
-
-View logs:
-
-```bash
-docker compose --env-file .env-example logs -f
-```
-
----
-
 ## 🧰 Makefile Commands
 
 This repository includes a `Makefile` to simplify common Docker commands.
@@ -134,22 +134,32 @@ Show available commands:
 make help
 ```
 
-Start all services:
+### Root compose commands
+
+Start all services from the root compose file:
 
 ```bash
 make up
 ```
 
-Stop all services:
+Stop all services from the root compose file:
 
 ```bash
 make down
 ```
 
-Build all services:
+Build all services from the root compose file:
 
 ```bash
 make build
+```
+
+### Python environment commands
+
+Build only the Python environment:
+
+```bash
+make python-build
 ```
 
 Start only the Python environment:
@@ -158,51 +168,89 @@ Start only the Python environment:
 make python-up
 ```
 
-Build only the Python environment:
-
-```bash
-make python-build
-```
-
 Enter the Python container:
 
 ```bash
 make python-shell
 ```
 
-Show Python container logs:
+Stop the Python environment:
 
 ```bash
-make python-logs
+make python-down
 ```
 
-Remove containers and volumes:
+### Standalone stack commands
+
+Start Redis:
 
 ```bash
-make clean
+make stack-redis-up
 ```
 
-Use a local `.env` file instead of `.env-example`:
+Start PostgreSQL:
 
 ```bash
-make up ENV_FILE=.env
+make stack-postgres-up
+```
+
+Start MongoDB:
+
+```bash
+make stack-mongodb-up
+```
+
+Start Elasticsearch and Kibana:
+
+```bash
+make stack-elastic-up
+```
+
+Start Kafka and Zookeeper:
+
+```bash
+make stack-kafka-up
+```
+
+Start Nginx and PHP:
+
+```bash
+make stack-nginx-php-up
+```
+
+Stop a standalone stack by replacing `up` with `down`, for example:
+
+```bash
+make stack-redis-down
+make stack-elastic-down
+make stack-kafka-down
+```
+
+View logs by replacing `up` with `logs`, for example:
+
+```bash
+make stack-redis-logs
+make stack-elastic-logs
+make stack-kafka-logs
 ```
 
 ---
 
-## 🔌 Service Connection Names
+## 🔌 Standalone Stack Ports
+
+| Stack | Service | Host Port | Container Hostname |
+|---|---|---:|---|
+| Redis | Redis | `6379` | `redis` |
+| PostgreSQL | PostgreSQL | `5432` | `postgres` |
+| MongoDB | MongoDB | `27017` | `mongodb` |
+| Elastic | Elasticsearch | `9200`, `9300` | `elasticsearch` |
+| Elastic | Kibana | `5601` | `kibana` |
+| Kafka | Zookeeper | `2181` | `zookeeper` |
+| Kafka | Kafka | `9092`, `9093` | `kafka` |
+| Nginx PHP | Nginx | `8081` | `nginx` |
+| Nginx PHP | PHP-FPM | internal only | `php` |
 
 Inside Docker containers, use service names instead of `localhost`.
-
-| Service | Hostname inside Docker | Port |
-|---|---:|---:|
-| PostgreSQL | `dbPG` | `5432` |
-| Redis | `redis` | `6379` |
-| MongoDB | `mongodb` | `27017` |
-| Elasticsearch | `elasticsearch` | `9200` |
-| Kafka | `kafka` | `9093` |
-| Kong Admin API | `kong` | `8001` |
-| Kibana | `kibana` | `5601` |
 
 Example PostgreSQL connection from Python:
 
@@ -211,11 +259,11 @@ import os
 import psycopg2
 
 conn = psycopg2.connect(
-    host="dbPG",
+    host="postgres",
     port=5432,
     user=os.getenv("PG_USER"),
     password=os.getenv("PG_PASSWORD"),
-    database="postgres"
+    database=os.getenv("PG_DATABASE", "app_db")
 )
 
 print("Connected to PostgreSQL")
@@ -250,40 +298,27 @@ make python-build
 
 ---
 
-## 🗺️ Recommended Future Structure
+## 🗺️ Recommended Direction
 
-Later, this repository can be improved by separating environments and infrastructure stacks:
+The recommended long-term direction is to use each folder as a standalone environment or stack:
 
 ```text
-follow-the-wind/
-├── environments/
-│   └── python-env/
-│       ├── docker-compose.yaml
-│       ├── Dockerfile
-│       └── requirements.txt
-├── stacks/
-│   ├── postgres/
-│   ├── redis/
-│   ├── elastic/
-│   ├── kafka/
-│   └── kong/
-├── Makefile
-└── README.md
+python/                    # reusable Python runtime
+stacks/redis/              # standalone Redis
+stacks/postgres/           # standalone PostgreSQL
+stacks/mongodb/            # standalone MongoDB
+stacks/elastic/            # standalone Elasticsearch + Kibana
+stacks/kafka-zookeeper/    # standalone Kafka + Zookeeper
+stacks/nginx-php/          # standalone Nginx + PHP
 ```
 
-This will make each environment or stack more standalone.
+This makes the repository easier to reuse for different projects.
 
 ---
 
 ## ⚠️ Notes
 
 Avoid using Docker images with the `latest` tag for serious development or production-like testing. Fixed versions make the environment more predictable.
-
-Example:
-
-```yaml
-image: kong:3.14
-```
 
 ---
 
