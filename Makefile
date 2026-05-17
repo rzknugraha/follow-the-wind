@@ -2,7 +2,7 @@
 
 ENV_FILE ?= .env-example
 COMPOSE ?= docker compose --env-file $(ENV_FILE)
-PYTHON_COMPOSE ?= docker compose --env-file ../$(ENV_FILE) -f python/docker-compose.yaml
+PYTHON_COMPOSE ?= docker compose --env-file $(ENV_FILE) -f python/docker-compose.yaml
 PYTHON_CONTAINER ?= python_env
 
 .DEFAULT_GOAL := help
