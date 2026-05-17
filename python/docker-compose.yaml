@@ -6,21 +6,16 @@ services:
     image: follow-the-wind-python-env:3.12
     container_name: python_env
     env_file:
-      - .env
+      - ../.env-example
     working_dir: /workspace
     volumes:
-      - ${APP_PATH}:/workspace
+      - ${APP_PATH:-../workspace}:/workspace
       - python_pip_cache:/root/.cache/pip
     tty: true
     stdin_open: true
+    ports:
+      - "8010:8000"
     command: tail -f /dev/null
-    networks:
-      - wind-dev-net
 
 volumes:
   python_pip_cache:
-
-networks:
-  wind-dev-net:
-    name: wind-dev-net
-    external: true
