@@ -14,7 +14,7 @@ This repository is designed for:
 - Python runtime environment for external repositories
 - Standalone infrastructure stacks
 - PHP + Nginx environment
-- PostgreSQL, Redis, MongoDB, Kafka, Zookeeper, Elasticsearch, and Kibana lab services
+- PostgreSQL, MySQL, Redis, MongoDB, Kafka, Zookeeper, Elasticsearch, and Kibana lab services
 - Testing integration between services
 - Running scripts or applications from another repository through volume mounting
 
@@ -39,6 +39,8 @@ follow-the-wind/
 │   ├── kafka-zookeeper/
 │   │   └── docker-compose.yaml
 │   ├── mongodb/
+│   │   └── docker-compose.yaml
+│   ├── mysql/
 │   │   └── docker-compose.yaml
 │   ├── nginx-php/
 │   │   └── docker-compose.yaml
@@ -103,6 +105,12 @@ Example:
 PG_USER=admin
 PG_PASSWORD=admin
 PG_DATABASE=app_db
+
+MYSQL_ROOT_PASSWORD=root_password
+MYSQL_DATABASE=app_db
+MYSQL_USER=app_user
+MYSQL_PASSWORD=app_password
+
 KONGA_TOKEN_SECRET=change_this_token_secret
 APP_PATH=../external-python-app
 ```
@@ -195,6 +203,12 @@ Start PostgreSQL:
 make stack-postgres-up
 ```
 
+Start MySQL:
+
+```bash
+make stack-mysql-up
+```
+
 Start MongoDB:
 
 ```bash
@@ -223,6 +237,7 @@ Stop a standalone stack by replacing `up` with `down`, for example:
 
 ```bash
 make stack-redis-down
+make stack-mysql-down
 make stack-elastic-down
 make stack-kafka-down
 ```
@@ -231,6 +246,7 @@ View logs by replacing `up` with `logs`, for example:
 
 ```bash
 make stack-redis-logs
+make stack-mysql-logs
 make stack-elastic-logs
 make stack-kafka-logs
 ```
@@ -243,6 +259,7 @@ make stack-kafka-logs
 |---|---|---:|---|
 | Redis | Redis | `6379` | `redis` |
 | PostgreSQL | PostgreSQL | `5432` | `postgres` |
+| MySQL | MySQL | `3306` | `mysql` |
 | MongoDB | MongoDB | `27017` | `mongodb` |
 | Elastic | Elasticsearch | `9200`, `9300` | `elasticsearch` |
 | Elastic | Kibana | `5601` | `kibana` |
@@ -268,6 +285,23 @@ conn = psycopg2.connect(
 )
 
 print("Connected to PostgreSQL")
+```
+
+Example MySQL connection from Python:
+
+```python
+import os
+import mysql.connector
+
+conn = mysql.connector.connect(
+    host="mysql",
+    port=3306,
+    user=os.getenv("MYSQL_USER"),
+    password=os.getenv("MYSQL_PASSWORD"),
+    database=os.getenv("MYSQL_DATABASE", "app_db")
+)
+
+print("Connected to MySQL")
 ```
 
 ---
@@ -329,6 +363,7 @@ The recommended long-term direction is to use each folder as a standalone enviro
 python/                    # reusable Python runtime
 stacks/redis/              # standalone Redis
 stacks/postgres/           # standalone PostgreSQL
+stacks/mysql/              # standalone MySQL
 stacks/mongodb/            # standalone MongoDB
 stacks/elastic/            # standalone Elasticsearch + Kibana
 stacks/kafka-zookeeper/    # standalone Kafka + Zookeeper
