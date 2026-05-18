@@ -7,6 +7,7 @@ PYTHON_CONTAINER ?= python_env
 
 STACK_REDIS ?= docker compose -f stacks/redis/docker-compose.yaml
 STACK_POSTGRES ?= docker compose --env-file $(ENV_FILE) -f stacks/postgres/docker-compose.yaml
+STACK_MYSQL ?= docker compose --env-file $(ENV_FILE) -f stacks/mysql/docker-compose.yaml
 STACK_MONGODB ?= docker compose -f stacks/mongodb/docker-compose.yaml
 STACK_ELASTIC ?= docker compose -f stacks/elastic/docker-compose.yaml
 STACK_KAFKA ?= docker compose -f stacks/kafka-zookeeper/docker-compose.yaml
@@ -18,6 +19,7 @@ STACK_NGINX_PHP ?= docker compose -f stacks/nginx-php/docker-compose.yaml
 	python-build python-up python-down python-shell python-logs python-ps \
 	stack-redis-up stack-redis-down stack-redis-logs \
 	stack-postgres-up stack-postgres-down stack-postgres-logs \
+	stack-mysql-up stack-mysql-down stack-mysql-logs \
 	stack-mongodb-up stack-mongodb-down stack-mongodb-logs \
 	stack-elastic-up stack-elastic-down stack-elastic-logs \
 	stack-kafka-up stack-kafka-down stack-kafka-logs \
@@ -45,6 +47,7 @@ help:
 	@echo "Standalone infrastructure stacks:"
 	@echo "  make stack-redis-up             Start Redis stack"
 	@echo "  make stack-postgres-up          Start PostgreSQL stack"
+	@echo "  make stack-mysql-up             Start MySQL stack"
 	@echo "  make stack-mongodb-up           Start MongoDB stack"
 	@echo "  make stack-elastic-up           Start Elasticsearch + Kibana stack"
 	@echo "  make stack-kafka-up             Start Kafka + Zookeeper stack"
@@ -118,6 +121,15 @@ stack-postgres-down:
 
 stack-postgres-logs:
 	$(STACK_POSTGRES) logs -f
+
+stack-mysql-up:
+	$(STACK_MYSQL) up -d
+
+stack-mysql-down:
+	$(STACK_MYSQL) down
+
+stack-mysql-logs:
+	$(STACK_MYSQL) logs -f
 
 stack-mongodb-up:
 	$(STACK_MONGODB) up -d
